@@ -40,7 +40,7 @@ tree = ae_tree(E_train,T_train,3,L);
 
 it = 0;
 tree.it = 0;
-while it < 1000:
+while it < 10000:
     print it;
     tree.step(100,1e-1);
     it += 1;
@@ -73,7 +73,7 @@ plt.show();
 Y = np.zeros((E_test.shape[0],3));
 C = np.zeros(E_test.shape[0],dtype=int)
 for i in range(E_test.shape[0]):
-    Y[i] = tree.eval_y(E_test[i],0);
+    Y[i] = np.arctanh(tree.eval_y(E_test[i],0));
     C[i] = np.argmax(T_test[i]);
 
 from mpl_toolkits.mplot3d import Axes3D;

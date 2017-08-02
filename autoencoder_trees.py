@@ -39,11 +39,21 @@ class ae_tree:
         self.dw = [np.zeros(N) if not self.leafs[l] else None for l in self.R];
         self.mw = [np.zeros(N) if not self.leafs[l] else None for l in self.R];
         self.nw = [np.zeros(N) if not self.leafs[l] else None for l in self.R];
+        
+        self.b  = [1e-8*rd.randn(1) if not self.leafs[l] else None for l in self.R];
+        self.db = [np.zeros(1) if not self.leafs[l] else None for l in self.R];
+        self.mb = [np.zeros(1) if not self.leafs[l] else None for l in self.R];
+        self.nb = [np.zeros(1) if not self.leafs[l] else None for l in self.R];
  
         self.v  = [1e-8*rd.randn(d,N)   if self.leafs[l] else None for l in self.R];
         self.dv = [np.zeros((d,N)) if self.leafs[l] else None for l in self.R];
         self.mv = [np.zeros((d,N)) if self.leafs[l] else None for l in self.R];
         self.nv = [np.zeros((d,N)) if self.leafs[l] else None for l in self.R];
+
+        self.c  = [1e-8*rd.randn(d)   if self.leafs[l] else None for l in self.R];
+        self.dc = [np.zeros(d) if self.leafs[l] else None for l in self.R];
+        self.mc = [np.zeros(d) if self.leafs[l] else None for l in self.R];
+        self.nc = [np.zeros(d) if self.leafs[l] else None for l in self.R];
 
         self.U  = 1e-8*rd.randn(K,d);
         self.dU = np.zeros((K,d));
@@ -67,10 +77,10 @@ class ae_tree:
     def eval_y(self,e,l):        
         #print l;
         if self.leafs[l]:
-            self.y[l] = np.tanh(np.dot(self.v[l],e));
+            self.y[l] = np.tanh(np.dot(self.v[l],e)+self.c[l]);
             return self.y[l];
         else:
-            self.s[l] = sigm(np.dot(self.w[l],e));
+            self.s[l] = sigm(np.dot(self.w[l],e)+self.b[l]);
             self.y[l] = self.s[l]*self.eval_y(e,2*l+1)+(1.0-self.s[l])*self.eval_y(e,2*l+2);
             return self.y[l];
         
@@ -94,6 +104,7 @@ class ae_tree:
         self.da += dJdz;
         
         self.dJdy[0] = np.dot(dJdz,self.U)*(1.0-np.power(self.y[0],2));
+        
         for l in self.R[1:]:
             k = (l-1)/2;
             if 2*k+1 == l:
@@ -106,9 +117,12 @@ class ae_tree:
         for l in self.R:
             if self.leafs[l]:
                 self.dv[l] += np.outer(self.dJdy[l],e);
+                self.dc[l] += self.dJdy[l];
             else:
                 aux = self.s[l]*(1.0-self.s[l])*np.dot(self.dJdy[l],self.y[2*l+1]-self.y[2*l+2]);
                 self.dw[l] += aux*e;
+                self.db[l] += aux;
+                
         return -np.dot(t,np.log(z+1e-30))/t.size;
     
     def step(self,B,dt):
@@ -120,8 +134,10 @@ class ae_tree:
             self.dJdy[l].fill(0.0);
             if self.leafs[l]:
                 self.dv[l].fill(0.0);
+                self.dc[l].fill(0.0);
             else:
                 self.dw[l].fill(0.0);
+                self.db[l].fill(0.0);
                 
         err = 0.0;
         for b in B_idx:
@@ -132,8 +148,10 @@ class ae_tree:
         for l in self.R:
             if self.leafs[l]:
                 self.dv[l] /= B;
+                self.dc[l] /= B;
             else:
                 self.dw[l] /= B;
+                self.db[l] /= B;
         
         aux_mu = 1./(1.0-self.mu**(1.0+self.it));
         aux_nu = 1./(1.0-self.nu**(1.0+self.it));
@@ -159,6 +177,13 @@ class ae_tree:
                 mv_ = aux_mu*self.mv[l];
                 nv_ = aux_nu*self.nv[l];
                 self.v[l] -= dt*mv_/(1e-2+np.sqrt(nv_));
+                
+                self.mc[l] = self.mu*self.mc[l]+(1.0-self.mu)*self.dc[l];
+                self.nc[l] = self.nu*self.nc[l]+(1.0-self.mu)*np.power(self.dc[l],2);
+                
+                mc_ = aux_mu*self.mc[l];
+                nc_ = aux_nu*self.nc[l];
+                self.c[l] -= dt*mc_/(1e-2+np.sqrt(nc_));
             else:
                 self.mw[l] = self.mu*self.mw[l]+(1.0-self.mu)*self.dw[l];
                 self.nw[l] = self.nu*self.nw[l]+(1.0-self.mu)*np.power(self.dw[l],2);
@@ -166,6 +191,13 @@ class ae_tree:
                 mw_ = aux_mu*self.mw[l];
                 nw_ = aux_nu*self.nw[l];
                 self.w[l] -= dt*mw_/(1e-2+np.sqrt(nw_));
+                
+                self.mb[l] = self.mu*self.mb[l]+(1.0-self.mu)*self.db[l];
+                self.nb[l] = self.nu*self.nb[l]+(1.0-self.mu)*np.power(self.db[l],2);
+                
+                mb_ = aux_mu*self.mb[l];
+                nb_ = aux_nu*self.nb[l];
+                self.b[l] -= dt*mb_/(1e-2+np.sqrt(nb_));
         print self.it,err;
         self.it += 1;
     
