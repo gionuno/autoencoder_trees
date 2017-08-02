@@ -35,13 +35,19 @@ for i in range(2*I):
         E_test[D*i+b]    = a['test'+str(b)][i,:]/255.0;
         T_test[D*i+b][b] = 1.0;
 
-L = 6;
+L = 7;
 tree = ae_tree(E_train,T_train,3,L);
 
 it = 0;
 tree.it = 0;
-while it < 10000:
-    tree.step(100,1e-1);
+while it < 1000:
+    tree.step(100,1e-1,True);
+    it += 1;
+    
+it = 0;
+tree.it = 0;
+while it < 1000:
+    tree.step(100,1e-1,False);
     it += 1;
 
 f = plt.figure();
@@ -49,13 +55,9 @@ gs_ = gs.GridSpec(L,2**(L-1));
 a = 0;
 for l in range(L-1):
     for k in range(2**l):
-        aux = np.zeros((28,28,3));
-        for c in range(3):
-            aux[:,:,c] = tree.w[a+k][c,:].reshape(28,28);
-            aux[:,:,c] -= np.min(aux[:,:,c]);
-            aux[:,:,c] /= np.max(aux[:,:,c])+1e-10;
+        aux = tree.w[a+k].reshape(28,28);
         aux_ax = f.add_subplot(gs_[l,k]);
-        aux_ax.imshow(aux);
+        aux_ax.imshow(aux,cmap='jet');
         aux_ax.set_xticklabels([]);
         aux_ax.set_yticklabels([]);
         aux_ax.grid(False)
@@ -76,7 +78,7 @@ plt.show();
 Y = np.zeros((E_test.shape[0],3));
 C = np.zeros(E_test.shape[0],dtype=int)
 for i in range(E_test.shape[0]):
-    Y[i] = np.arctanh(tree.eval_y(E_test[i],0));
+    Y[i] = tree.eval_y(E_test[i],0);
     C[i] = np.argmax(T_test[i]);
 
 from mpl_toolkits.mplot3d import Axes3D;
