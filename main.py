@@ -41,7 +41,6 @@ tree = ae_tree(E_train,T_train,3,L);
 it = 0;
 tree.it = 0;
 while it < 10000:
-    print it;
     tree.step(100,1e-1);
     it += 1;
 
@@ -50,19 +49,23 @@ gs_ = gs.GridSpec(L,2**(L-1));
 a = 0;
 for l in range(L-1):
     for k in range(2**l):
+        aux = np.zeros((28,28,3));
+        for c in range(3):
+            aux[:,:,c] = tree.w[a+k][c,:].reshape(28,28);
+            aux[:,:,c] -= np.min(aux[:,:,c]);
+            aux[:,:,c] /= np.max(aux[:,:,c])+1e-10;
         aux_ax = f.add_subplot(gs_[l,k]);
-        aux_ax.imshow(tree.w[a+k].reshape(28,28),cmap='jet');
+        aux_ax.imshow(aux);
         aux_ax.set_xticklabels([]);
         aux_ax.set_yticklabels([]);
         aux_ax.grid(False)
     a += 2**l;
 for k in range(2**(L-1)):
     aux = np.zeros((28,28,3));
-    aux[:,:,0] = tree.v[a+k][0,:].reshape(28,28);
-    aux[:,:,1] = tree.v[a+k][1,:].reshape(28,28);
-    aux[:,:,2] = tree.v[a+k][2,:].reshape(28,28);
-    aux -= np.min(aux);
-    aux /= np.max(aux)+1e-10;
+    for c in range(3):
+        aux[:,:,c] = tree.v[a+k][c,:].reshape(28,28);
+        aux[:,:,c] -= np.min(aux[:,:,c]);
+        aux[:,:,c] /= np.max(aux[:,:,c])+1e-10;
     aux_ax = f.add_subplot(gs_[L-1,k]);
     aux_ax.imshow(aux);
     aux_ax.set_xticklabels([]);

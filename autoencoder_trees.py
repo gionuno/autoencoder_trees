@@ -35,22 +35,22 @@ class ae_tree:
         
         self.R = range((2**L)-1);
         
-        self.w  = [1e-8*rd.randn(N) if not self.leafs[l] else None for l in self.R];
-        self.dw = [np.zeros(N) if not self.leafs[l] else None for l in self.R];
-        self.mw = [np.zeros(N) if not self.leafs[l] else None for l in self.R];
-        self.nw = [np.zeros(N) if not self.leafs[l] else None for l in self.R];
+        self.w  = [1e-1*rd.randn(d,N) if not self.leafs[l] else None for l in self.R];
+        self.dw = [np.zeros((d,N)) if not self.leafs[l] else None for l in self.R];
+        self.mw = [np.zeros((d,N)) if not self.leafs[l] else None for l in self.R];
+        self.nw = [np.zeros((d,N)) if not self.leafs[l] else None for l in self.R];
         
-        self.b  = [1e-8*rd.randn(1) if not self.leafs[l] else None for l in self.R];
-        self.db = [np.zeros(1) if not self.leafs[l] else None for l in self.R];
-        self.mb = [np.zeros(1) if not self.leafs[l] else None for l in self.R];
-        self.nb = [np.zeros(1) if not self.leafs[l] else None for l in self.R];
+        self.b  = [1e-1*rd.randn(d) if not self.leafs[l] else None for l in self.R];
+        self.db = [np.zeros(d) if not self.leafs[l] else None for l in self.R];
+        self.mb = [np.zeros(d) if not self.leafs[l] else None for l in self.R];
+        self.nb = [np.zeros(d) if not self.leafs[l] else None for l in self.R];
  
-        self.v  = [1e-8*rd.randn(d,N)   if self.leafs[l] else None for l in self.R];
+        self.v  = [1e-1*rd.randn(d,N)   if self.leafs[l] else None for l in self.R];
         self.dv = [np.zeros((d,N)) if self.leafs[l] else None for l in self.R];
         self.mv = [np.zeros((d,N)) if self.leafs[l] else None for l in self.R];
         self.nv = [np.zeros((d,N)) if self.leafs[l] else None for l in self.R];
 
-        self.c  = [1e-8*rd.randn(d)   if self.leafs[l] else None for l in self.R];
+        self.c  = [1e-1*rd.randn(d)   if self.leafs[l] else None for l in self.R];
         self.dc = [np.zeros(d) if self.leafs[l] else None for l in self.R];
         self.mc = [np.zeros(d) if self.leafs[l] else None for l in self.R];
         self.nc = [np.zeros(d) if self.leafs[l] else None for l in self.R];
@@ -65,13 +65,13 @@ class ae_tree:
         self.ma = np.zeros(K);
         self.na = np.zeros(K);
         
-        self.s = np.zeros((2**L)-1);
+        self.s = np.zeros(((2**L)-1,d));
         
         self.y    = [np.zeros(d) for l in self.R];
         self.dJdy = [np.zeros(d) for l in self.R];
         
-        self.mu = 0.5;
-        self.nu = 0.999;
+        self.mu = 0.25;
+        self.nu = 0.125;
         self.it = 0.0;
         
     def eval_y(self,e,l):        
@@ -119,8 +119,8 @@ class ae_tree:
                 self.dv[l] += np.outer(self.dJdy[l],e);
                 self.dc[l] += self.dJdy[l];
             else:
-                aux = self.s[l]*(1.0-self.s[l])*np.dot(self.dJdy[l],self.y[2*l+1]-self.y[2*l+2]);
-                self.dw[l] += aux*e;
+                aux = self.s[l]*(1.0-self.s[l])*self.dJdy[l]*(self.y[2*l+1]-self.y[2*l+2]);
+                self.dw[l] += np.outer(aux,e);
                 self.db[l] += aux;
                 
         return -np.dot(t,np.log(z+1e-30))/t.size;
